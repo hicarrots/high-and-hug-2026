@@ -593,7 +593,7 @@ function buildSlides(people) {
    사진 Fallback
 ══════════════════════════════════ */
 function handleImgError(img, name, idx) {
-  const exts = ['jpg', 'JPG', 'png', 'PNG', 'jpeg', 'JPEG', 'webp', 'WEBP'];
+  const exts = ['jpg', 'JPG', 'png', 'PNG', 'jpeg', 'JPEG'];
   if (idx < exts.length) {
     img.src = `photos/${name}.${exts[idx]}`;
     img.onerror = () => handleImgError(img, name, idx + 1);
