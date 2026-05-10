@@ -27,6 +27,12 @@
     height: 100vh;
   }
 
+  /* 모바일에서 스크롤 허용 */
+  @media (max-width: 768px) {
+    body { overflow: hidden; }
+    #stage { overflow: hidden; }
+  }
+
   /* ── 상단 컨트롤 바 ── */
   #top-bar {
     position: fixed;
@@ -336,6 +342,64 @@
     width: 0%;
     transition: width linear;
   }
+
+  /* ── 모바일 반응형 ── */
+  @media (max-width: 768px) {
+    :root {
+      --card-w: calc((100vw - 48px) / 2);
+      --card-gap: 10px;
+      --bar-h: 44px;
+    }
+
+    /* 상단 바 간소화 */
+    .logo { font-size: 12px; }
+    .logo .sep { margin: 0 3px; }
+    #slide-info { font-size: 11px; }
+    .controls { gap: 6px; }
+    .controls button { padding: 4px 10px; font-size: 11px; }
+    #btn-fs { display: none; } /* 전체화면 버튼 숨김 */
+
+    /* 슬라이드 패딩 */
+    .slide { padding: 12px 12px 8px; }
+
+    /* 그룹 헤더 */
+    .group-header { margin-bottom: 12px; gap: 8px; }
+    .group-title { font-size: 14px; letter-spacing: 0.5px; }
+    .group-dot { width: 8px; height: 8px; }
+
+    /* 카드 그리드: 2열 */
+    .card-grid {
+      max-width: 100%;
+      gap: var(--card-gap);
+      align-content: flex-start;
+      overflow-y: auto;
+      max-height: calc(100vh - var(--bar-h) - 60px);
+    }
+
+    /* 카드 */
+    .card { border-radius: 10px; }
+    .card-body { padding: 8px 8px 10px; gap: 4px; }
+    .card-name { font-size: 14px; }
+    .card-part { font-size: 10px; }
+    .card-keyword { font-size: 10px; padding: 3px 10px; margin-top: 2px; }
+
+    /* 콜라보 슬라이드 */
+    .slide.collab { padding: 8px 8px 6px; overflow-y: auto; }
+    .collab-grid { gap: 6px; }
+    .slide.collab .group-title { font-size: 13px; }
+
+    /* 배경 타이포 모바일 */
+    #bg-title { font-size: 50vw; }
+  }
+
+  @media (max-width: 480px) {
+    :root {
+      --card-w: calc((100vw - 36px) / 2);
+      --card-gap: 8px;
+    }
+    .logo { font-size: 11px; }
+    #btn-prev span, #btn-next span { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -346,10 +410,10 @@
   <div class="logo">Woori High <span class="sep">::</span> <span class="hi">2026 High &amp; Hug</span></div>
   <div id="slide-info">— / —</div>
   <div class="controls">
-    <button id="btn-prev">◀ 이전</button>
-    <button id="btn-play" class="active">⏸ 일시정지</button>
-    <button id="btn-next">다음 ▶</button>
-    <button id="btn-fs">⛶ 전체화면</button>
+    <button id="btn-prev">◀</button>
+    <button id="btn-play" class="active">⏸</button>
+    <button id="btn-next">▶</button>
+    <button id="btn-fs">⛶</button>
   </div>
 </div>
 
@@ -777,7 +841,7 @@ function resetProgress() {
 
 function play() {
   isPlaying = true;
-  document.getElementById('btn-play').textContent = '⏸ 일시정지';
+  document.getElementById('btn-play').textContent = '⏸';
   document.getElementById('btn-play').classList.add('active');
   resetProgress();
   timer = setInterval(() => goTo(current + 1), INTERVAL);
@@ -785,7 +849,7 @@ function play() {
 
 function pause() {
   isPlaying = false;
-  document.getElementById('btn-play').textContent = '▶ 재생';
+  document.getElementById('btn-play').textContent = '▶';
   document.getElementById('btn-play').classList.remove('active');
   clearInterval(timer);
   const bar = document.getElementById('progress-bar');
@@ -831,6 +895,14 @@ function nav(delta) {
     if (e.key === 'ArrowLeft')  nav(-1);
     if (e.key === 'ArrowRight') nav(1);
     if (e.key === ' ') { e.preventDefault(); isPlaying ? pause() : play(); }
+  });
+
+  // 터치 스와이프
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) { dx < 0 ? nav(1) : nav(-1); }
   });
 
   play();
