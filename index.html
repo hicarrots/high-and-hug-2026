@@ -410,7 +410,7 @@ const RAW_LINES = [
   '김기윤,스탭,찬양팀,고등부의 얼굴,Staff_김기윤',
   '허준혁,스탭,찬양팀,조용한 사람,Staff_허준혁',
   '박혜원,스탭,스탭: 예배팀,고등부의 05대장,Staff_박혜원',
-  '김혜린,스탭,미디어팀,고등부의 모르겠어요,Staff_김혜린.jpg',
+  '김혜린,스탭,미디어팀,고등부의 모르겠어요,Staff_김혜린',
   '이채희,스탭,찬양팀,고등부의 국밥,Staff_이채희',
   '나선유,스탭,미디어팀,고등부의 시선,Staff_나선유',
   '김우진,스탭,미디어팀,잘모르겠습니다,Staff_김우진',
@@ -425,11 +425,11 @@ const RAW_LINES = [
   '이선주,스탭,스탭,바나바사랑해,Staff_이선주',
   '박준규,스탭,찬양팀,고등부의 divo,Staff_박준규',
   '도윤성,스탭,스탭: 미디어팀,다가오는 6월의 국군장병,Staff_도윤성',
-  '황현민,스탭,찬양팀,고등부의 외치는 소리 (고외소),Staff_황현민.JPG.',
+  '황현민,스탭,찬양팀,고등부의 외치는 소리 (고외소),Staff_황현민',
   '최성우,스탭,행정 기획디자인팀,고등부의 공대생 패트,Staff_최성우',
   '박성준,스탭,바나바팀,고등부의 예스맨,Staff_박성준',
   '최지성,스탭,예배팀,피곤해몬스터,Staff_최지성',
-  '김기영,스탭,기획디자인팀,크리에이트영,Staff_김기영.JPG',
+  '김기영,스탭,기획디자인팀,크리에이트영,Staff_김기영',
   '김승혁,스탭,바나바팀,비타민!,Staff_김승혁',
   '이수아,스탭,미디어팀,뚜뚜,Staff_이수아',
   '이지윤,스탭,스탭: 찬양팀,이지~,Staff_이지윤',
@@ -593,7 +593,7 @@ function buildSlides(people) {
    사진 Fallback
 ══════════════════════════════════ */
 function handleImgError(img, name, idx) {
-  const exts = ['png', 'jpeg', 'webp'];
+  const exts = ['jpg', 'JPG', 'png', 'PNG', 'jpeg', 'JPEG', 'webp', 'WEBP'];
   if (idx < exts.length) {
     img.src = `photos/${name}.${exts[idx]}`;
     img.onerror = () => handleImgError(img, name, idx + 1);
