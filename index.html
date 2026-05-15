@@ -11,26 +11,32 @@
     --cream: #f5f0e8;
     --dark: #1a1a2e;
     --bar-h: 52px;
-    --card-w: 280px;
-    --card-gap: 20px;
+    --prog-h: 4px;
+    /* 가용 세로: 1080 - 52(bar) - 4(progress) = 1024px */
+    --stage-h: calc(100vh - var(--bar-h) - var(--prog-h));
+    /* 슬라이드 내부 패딩 top/bottom = 16px / 8px, group-header = 56px */
+    --inner-h: calc(var(--stage-h) - 24px - 56px);
+    /* card-body 고정 높이: padding 22px + name 26px + part 18px + kw 30px + gap 14px = 약 110px */
+    --body-h: 108px;
+    /* card-w: photo는 정사각, card-h = photo + body-h */
+    /* 2행 기준(최악): photo = (inner-h - gap 16px) / 2 - body-h */
+    /* inner-h ≈ 944px → photo = (944-16)/2 - 108 = 464-108 = 356px */
+    --card-w: 210px;
+    --card-gap: 16px;
     --c0: #e07a5f;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;        /* ← 전체 스크롤 차단 */
+  }
+
   body {
     font-family: 'Noto Sans KR', sans-serif;
     background: var(--dark);
     color: #fff;
-    overflow: hidden;
-    width: 100vw;
-    height: 100vh;
-  }
-
-  /* 모바일에서 스크롤 허용 */
-  @media (max-width: 768px) {
-    body { overflow: hidden; }
-    #stage { overflow: hidden; }
   }
 
   /* ── 상단 컨트롤 바 ── */
@@ -98,7 +104,9 @@
   #stage {
     position: fixed;
     top: var(--bar-h);
-    left: 0; right: 0; bottom: 4px;
+    left: 0; right: 0;
+    height: var(--stage-h);
+    overflow: hidden;         /* ← 스테이지도 스크롤 차단 */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -112,13 +120,14 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: 100%;
-    padding: 20px 40px 12px;
+    height: 100%;             /* ← stage 높이에 맞춤 */
+    padding: 16px 40px 8px;
     animation: fadeIn 0.55s ease;
+    overflow: hidden;         /* ← 슬라이드 내부도 차단 */
   }
   .slide.active { display: flex; }
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 
@@ -128,24 +137,25 @@
     align-items: center;
     justify-content: center;
     gap: 12px;
-    margin-bottom: 22px;
+    margin-bottom: 14px;
     width: 100%;
     max-width: 1820px;
+    flex-shrink: 0;           /* ← 헤더 높이 고정 */
   }
   .group-dot {
-    width: 12px; height: 12px;
+    width: 11px; height: 11px;
     border-radius: 50%;
     flex-shrink: 0;
   }
   .group-title {
     font-family: 'Noto Sans KR', sans-serif;
     font-weight: 700;
-    font-size: 26px;
+    font-size: 22px;
     letter-spacing: 1.5px;
     opacity: 0.75;
   }
 
-  /* ── 카드 그리드: 가운데 정렬, 최대 5열 ── */
+  /* ── 카드 그리드 ── */
   .card-grid {
     display: flex;
     flex-wrap: wrap;
@@ -153,33 +163,35 @@
     justify-content: center;
     align-items: flex-start;
     align-content: center;
-    max-width: calc(5 * var(--card-w) + 4 * var(--card-gap));
+    /* 남은 높이를 card-grid가 채움 */
+    flex: 1;
+    min-height: 0;
     width: 100%;
+    max-width: 1860px;
+    overflow: hidden;
   }
-
-  /* 바나바팀: 4열 기준으로 max-width 제한 → 4+2 배치 */
   .card-grid.barnabas {
     max-width: calc(4 * var(--card-w) + 3 * var(--card-gap));
   }
 
-  /* ── 퍼소나 카드 (고정 크기) ── */
+  /* ── 퍼소나 카드 ── */
   .card {
     width: var(--card-w);
     flex-shrink: 0;
     background: var(--cream);
-    border-radius: 14px;
+    border-radius: 12px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 8px 28px rgba(0,0,0,0.38);
+    box-shadow: 0 6px 22px rgba(0,0,0,0.38);
     transition: transform 0.22s ease, box-shadow 0.22s ease;
   }
   .card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 16px 44px rgba(0,0,0,0.52);
+    transform: translateY(-4px);
+    box-shadow: 0 14px 36px rgba(0,0,0,0.52);
   }
 
-  /* 1:1 사진 */
+  /* 1:1 사진 — card-w × card-w */
   .card-photo {
     width: 100%;
     aspect-ratio: 1 / 1;
@@ -190,43 +202,41 @@
     image-orientation: from-image;
   }
 
-  /* 카드 하단 — 가운데 정렬 */
+  /* 카드 하단 */
   .card-body {
-    padding: 16px 14px 18px;
+    padding: 10px 10px 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 6px;
+    gap: 4px;
     background: var(--cream);
-    border-top: 4px solid var(--accent, #e07a5f);
+    border-top: 3px solid var(--accent, #e07a5f);
+    flex-shrink: 0;
   }
 
-  /* 이름 */
   .card-name {
     font-family: 'Nunito', sans-serif;
     font-weight: 900;
-    font-size: 26px;
+    font-size: 20px;
     color: #1a1a2e;
     line-height: 1.15;
     word-break: keep-all;
   }
 
-  /* 직분 서브텍스트 */
   .card-part {
-    font-size: 15px;
+    font-size: 12px;
     color: rgba(26,26,46,0.42);
     line-height: 1.3;
     word-break: keep-all;
   }
 
-  /* 키워드 pill */
   .card-keyword {
     display: inline-flex;
     align-items: center;
-    padding: 6px 18px;
+    padding: 4px 12px;
     border-radius: 20px;
-    font-size: 18px;
+    font-size: 13px;
     font-weight: 700;
     color: #fff;
     background: var(--accent, #e07a5f);
@@ -234,8 +244,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    letter-spacing: 0.15px;
-    margin-top: 6px;
+    letter-spacing: 0.1px;
+    margin-top: 3px;
   }
 
   /* ── 콜라보 슬라이드 ── */
@@ -243,29 +253,33 @@
     justify-content: center;
     padding: 10px 20px 8px;
   }
-  .slide.collab .group-header { margin-bottom: 10px; }
-  .slide.collab .group-title { font-size: 20px; }
-  .slide.collab .group-dot { width: 10px; height: 10px; }
+  .slide.collab .group-header { margin-bottom: 8px; }
+  .slide.collab .group-title { font-size: 18px; }
+  .slide.collab .group-dot { width: 9px; height: 9px; }
   .collab-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
     justify-content: center;
     align-items: flex-start;
+    align-content: center;
     width: 100%;
-    max-width: 1860px;
+    max-width: 1880px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
   .card-sm {
     flex-shrink: 0;
     background: var(--cream);
-    border-radius: 10px;
+    border-radius: 8px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.32);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.32);
     transition: transform 0.2s ease;
   }
-  .card-sm:hover { transform: translateY(-3px); }
+  .card-sm:hover { transform: translateY(-2px); }
   .card-sm .card-photo {
     width: 100%;
     aspect-ratio: 1 / 1;
@@ -276,19 +290,20 @@
     image-orientation: from-image;
   }
   .card-sm .card-body {
-    padding: 6px 6px 8px;
+    padding: 5px 5px 7px;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 3px;
+    gap: 2px;
     background: var(--cream);
-    border-top: 3px solid var(--accent, #e07a5f);
+    border-top: 2px solid var(--accent, #e07a5f);
+    flex-shrink: 0;
   }
   .card-sm .card-name {
     font-family: 'Nunito', sans-serif;
     font-weight: 900;
-    font-size: 13px;
+    font-size: 12px;
     color: #1a1a2e;
     line-height: 1.1;
     word-break: keep-all;
@@ -302,9 +317,9 @@
   .card-sm .card-keyword {
     display: inline-flex;
     align-items: center;
-    padding: 2px 7px;
+    padding: 2px 6px;
     border-radius: 20px;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 700;
     color: #fff;
     background: var(--accent, #e07a5f);
@@ -312,14 +327,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    margin-top: 2px;
+    margin-top: 1px;
   }
 
   /* ── 프로그레스 바 ── */
   #progress-wrap {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    height: 4px;
+    height: var(--prog-h);
     background: rgba(255,255,255,0.08);
     z-index: 100;
   }
@@ -343,26 +358,18 @@
     .controls { gap: 6px; }
     .controls button { padding: 4px 10px; font-size: 11px; }
     #btn-fs { display: none; }
-    .slide { padding: 12px 12px 8px; }
-    .group-header { margin-bottom: 12px; gap: 8px; }
-    .group-title { font-size: 14px; letter-spacing: 0.5px; }
+    .slide { padding: 10px 12px 6px; }
+    .group-header { margin-bottom: 10px; gap: 8px; }
+    .group-title { font-size: 13px; letter-spacing: 0.5px; }
     .group-dot { width: 8px; height: 8px; }
-    .card-grid {
-      max-width: 100%;
-      gap: var(--card-gap);
-      align-content: flex-start;
-      overflow-y: auto;
-      max-height: calc(100vh - var(--bar-h) - 60px);
-    }
-    .card-grid.barnabas { max-width: 100%; }
-    .card { border-radius: 10px; }
-    .card-body { padding: 8px 8px 10px; gap: 4px; }
-    .card-name { font-size: 14px; }
-    .card-part { font-size: 10px; }
-    .card-keyword { font-size: 10px; padding: 3px 10px; margin-top: 2px; }
-    .slide.collab { padding: 8px 8px 6px; overflow-y: auto; }
-    .collab-grid { gap: 6px; }
-    .slide.collab .group-title { font-size: 13px; }
+    .card { border-radius: 8px; }
+    .card-body { padding: 6px 6px 8px; gap: 3px; }
+    .card-name { font-size: 13px; }
+    .card-part { font-size: 9px; }
+    .card-keyword { font-size: 9px; padding: 2px 8px; margin-top: 1px; }
+    .slide.collab { padding: 6px 8px 4px; }
+    .collab-grid { gap: 5px; }
+    .slide.collab .group-title { font-size: 12px; }
     #bg-title { font-size: 50vw; }
   }
 
@@ -524,6 +531,36 @@ function detectGrade(p) {
 }
 
 /* ══════════════════════════════════
+   카드 너비 동적 계산
+   슬라이드당 최대 인원 수를 받아서
+   1920×1080 기준으로 넘치지 않는
+   최적 card-w를 계산
+══════════════════════════════════ */
+function calcCardW(memberCount) {
+  const BAR_H   = 52;
+  const PROG_H  = 4;
+  const PAD_TB  = 24;   // slide padding top+bottom
+  const HDR_H   = 48;   // group-header + margin
+  const BODY_H  = 96;   // card-body 고정 높이 (압축 버전)
+  const GAP     = 16;
+
+  const stageH  = window.innerHeight - BAR_H - PROG_H;
+  const gridH   = stageH - PAD_TB - HDR_H;
+  const stageW  = window.innerWidth - 80; // padding 40*2
+
+  // 최적 열 수 탐색
+  let bestW = 80;
+  for (let cols = 1; cols <= memberCount; cols++) {
+    const rows  = Math.ceil(memberCount / cols);
+    const cardW = Math.floor((stageW - GAP * (cols - 1)) / cols);
+    const cardH = cardW + BODY_H; // photo = cardW (1:1)
+    const totalH = rows * cardH + GAP * (rows - 1);
+    if (totalH <= gridH && cardW > bestW) bestW = cardW;
+  }
+  return Math.min(bestW, 300); // 최대 300px 캡
+}
+
+/* ══════════════════════════════════
    슬라이드 목록 생성
 ══════════════════════════════════ */
 function buildSlides(people) {
@@ -541,15 +578,14 @@ function buildSlides(people) {
   }
 
   // ── 스탭 ──
-  // 바나바팀: 6명 → 4+2 배치 (barnabas 클래스로 4열 제한)
   const staffGroups = [
-    { label: '스탭 · 예배 & 찬양', color: '#9b72cf', page: 10, gridClass: '',
+    { label: '스탭 · 예배 & 찬양',      color: '#9b72cf', page: 10, gridClass: '',
       match: p => p.part.includes('찬양') || p.part.includes('예배') },
-    { label: '스탭 · 미디어 & 디자인', color: '#4db6d0', page: PAGE, gridClass: '',
+    { label: '스탭 · 미디어 & 디자인',  color: '#4db6d0', page: PAGE, gridClass: '',
       match: p => p.part.includes('미디어') || p.part.includes('디자인') || p.part.includes('기획') || p.part.includes('행정') },
-    { label: '스탭 · 바나바팀', color: '#6bb38e', page: PAGE, gridClass: 'barnabas',
+    { label: '스탭 · 바나바팀',         color: '#6bb38e', page: PAGE, gridClass: 'barnabas',
       match: p => p.part.includes('바나바') || p.part === '스탭' },
-    { label: '스탭', color: '#7b8ec8', page: PAGE, gridClass: '', match: () => true },
+    { label: '스탭',                    color: '#7b8ec8', page: PAGE, gridClass: '', match: () => true },
   ];
   const staffAll = people.filter(p => p.category === '스탭');
   const staffAssigned = new Set();
@@ -606,10 +642,11 @@ function handleImgError(img, name, idx) {
 /* ══════════════════════════════════
    카드 생성 (공용)
 ══════════════════════════════════ */
-function makeCard(person, color, size = 'normal') {
+function makeCard(person, color, cardW, size) {
   const card = document.createElement('div');
   card.className = size === 'sm' ? 'card-sm' : 'card';
   card.style.setProperty('--accent', color);
+  if (cardW) card.style.width = cardW + 'px';
 
   const img = document.createElement('img');
   img.className = 'card-photo';
@@ -655,6 +692,9 @@ function renderSlides(slideData) {
   stage.innerHTML = '';
 
   slideData.forEach((sd, slideIdx) => {
+    // 이 슬라이드에 최적화된 카드 너비 계산
+    const cardW = calcCardW(sd.members.length);
+
     const slide = document.createElement('div');
     slide.className = 'slide' + (slideIdx === 0 ? ' active' : '');
 
@@ -670,7 +710,7 @@ function renderSlides(slideData) {
     grid.className = 'card-grid' + (sd.gridClass ? ' ' + sd.gridClass : '');
 
     sd.members.forEach(person => {
-      grid.appendChild(makeCard(person, sd.color, 'normal'));
+      grid.appendChild(makeCard(person, sd.color, cardW, 'normal'));
     });
 
     slide.appendChild(grid);
@@ -690,18 +730,22 @@ const COLLAB_DEFS = [
 function makeCollabSlide(members, label, color, nameOnly) {
   const n = members.length;
   const GAP = 6;
-  const AVAIL_W = 1880;
-  const AVAIL_H = 860;
-  const BODY_H = nameOnly ? 30 : 65;
+  const BAR_H  = 52;
+  const PROG_H = 4;
+  const HDR_H  = 44;
+  const PAD_TB = 18;
+  const BODY_H_SM   = nameOnly ? 26 : 52;
+  const AVAIL_W = window.innerWidth  - 40;
+  const AVAIL_H = window.innerHeight - BAR_H - PROG_H - PAD_TB - HDR_H;
 
   let bestW = 40;
   for (let cols = 1; cols <= n; cols++) {
-    const rows = Math.ceil(n / cols);
-    const w = Math.floor((AVAIL_W - GAP * (cols - 1)) / cols);
-    const totalH = rows * (w + BODY_H) + GAP * (rows - 1);
+    const rows  = Math.ceil(n / cols);
+    const w     = Math.floor((AVAIL_W - GAP * (cols - 1)) / cols);
+    const totalH = rows * (w + BODY_H_SM) + GAP * (rows - 1);
     if (totalH <= AVAIL_H && w > bestW) bestW = w;
   }
-  const cardW = Math.min(bestW, nameOnly ? 100 : 160);
+  const cardW = Math.min(bestW, nameOnly ? 90 : 150);
 
   const slide = document.createElement('div');
   slide.className = 'slide collab';
@@ -709,8 +753,8 @@ function makeCollabSlide(members, label, color, nameOnly) {
   const hdr = document.createElement('div');
   hdr.className = 'group-header';
   hdr.innerHTML = `
-    <div class="group-dot" style="background:${color};width:10px;height:10px;border-radius:50%;flex-shrink:0;"></div>
-    <div class="group-title" style="font-size:18px;opacity:0.75;">${label}</div>
+    <div class="group-dot" style="background:${color};width:9px;height:9px;border-radius:50%;flex-shrink:0;"></div>
+    <div class="group-title" style="font-size:17px;opacity:0.75;">${label}</div>
   `;
   slide.appendChild(hdr);
 
@@ -727,15 +771,14 @@ function makeCollabSlide(members, label, color, nameOnly) {
 
   members.forEach(person => {
     const accent = nameOnly ? (catColor[person.category] || '#aaa') : color;
-    const card = makeCard(person, accent, 'sm');
-    card.style.width = cardW + 'px';
+    const card = makeCard(person, accent, cardW, 'sm');
 
     if (nameOnly) {
       const body = card.querySelector('.card-body');
       const name = body.querySelector('.card-name');
       body.innerHTML = '';
-      body.style.padding = '4px 4px 6px';
-      name.style.fontSize = Math.max(9, Math.min(13, cardW * 0.13)) + 'px';
+      body.style.padding = '3px 3px 5px';
+      name.style.fontSize = Math.max(8, Math.min(12, cardW * 0.13)) + 'px';
       body.appendChild(name);
     }
 
@@ -760,7 +803,7 @@ function renderCollabSlides(people) {
     const ia = ORDER.indexOf(a.category), ib = ORDER.indexOf(b.category);
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
   });
-  stage.appendChild(makeCollabSlide(allSorted, 'High &amp; Hug 2026', '#e07a5f', true));
+  stage.appendChild(makeCollabSlide(allSorted, 'High &amp; Hug 2026 — 전체', '#e07a5f', true));
 }
 
 /* ══════════════════════════════════
@@ -847,7 +890,6 @@ function nav(delta) {
     if (e.key === ' ') { e.preventDefault(); isPlaying ? pause() : play(); }
   });
 
-  // 터치 스와이프
   let touchStartX = 0;
   document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
   document.addEventListener('touchend', e => {
@@ -855,7 +897,7 @@ function nav(delta) {
     if (Math.abs(dx) > 50) { dx < 0 ? nav(1) : nav(-1); }
   });
 
-  pause(); // 초기 상태: 정지, 버튼 눌러서 시작
+  pause();
 })();
 </script>
 </body>
