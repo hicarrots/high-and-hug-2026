@@ -161,9 +161,8 @@
     flex-wrap: wrap;
     gap: var(--card-gap);
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
     align-content: center;
-    /* 남은 높이를 card-grid가 채움 */
     flex: 1;
     min-height: 0;
     width: 100%;
@@ -171,12 +170,11 @@
     overflow: hidden;
   }
   .card-grid.barnabas {
-    max-width: calc(4 * var(--card-w) + 3 * var(--card-gap));
+    max-width: calc(2 * var(--card-w) + 1 * var(--card-gap));
   }
 
   /* ── 퍼소나 카드 ── */
   .card {
-    width: var(--card-w);
     flex-shrink: 0;
     background: var(--cream);
     border-radius: 12px;
@@ -185,6 +183,8 @@
     flex-direction: column;
     box-shadow: 0 6px 22px rgba(0,0,0,0.38);
     transition: transform 0.22s ease, box-shadow 0.22s ease;
+    /* 카드 높이를 뷰포트 기준으로 직접 제한 */
+    max-height: calc(var(--stage-h) - 80px);
   }
   .card:hover {
     transform: translateY(-4px);
@@ -532,45 +532,13 @@ function detectGrade(p) {
 
 /* ══════════════════════════════════
    카드 너비 동적 계산
-   슬라이드당 최대 인원 수를 받아서
-   1920×1080 기준으로 넘치지 않는
-   최적 card-w를 계산
-══════════════════════════════════ */
-function calcCardW(memberCount, fixedCols) {
-  const BAR_H   = 52;
-  const PROG_H  = 4;
-  const PAD_TB  = 24;   // slide padding top+bottom
-  const HDR_H   = 48;   // group-header + margin
-  const BODY_H  = 96;   // card-body 고정 높이 (압축 버전)
-  const GAP     = 16;
-
-  const stageH  = window.innerHeight - BAR_H - PROG_H;
-  const gridH   = stageH - PAD_TB - HDR_H;
-  const stageW  = window.innerWidth - 80; // padding 40*2
-
-  // 열 수가 고정되어 있으면 그 열 수 기준으로 너비 계산
-  if (fixedCols) {
-    return Math.min(Math.floor((stageW - GAP * (fixedCols - 1)) / fixedCols), 300);
-  }
-
-  // 최적 열 수 탐색
-  let bestW = 80;
-  for (let cols = 1; cols <= memberCount; cols++) {
-    const rows  = Math.ceil(memberCount / cols);
-    const cardW = Math.floor((stageW - GAP * (cols - 1)) / cols);
-    const cardH = cardW + BODY_H; // photo = cardW (1:1)
-    const totalH = rows * cardH + GAP * (rows - 1);
-    if (totalH <= gridH && cardW > bestW) bestW = cardW;
-  }
-  return Math.min(bestW, 300); // 최대 300px 캡
-}
-
 /* ══════════════════════════════════
    슬라이드 목록 생성
+   일반 슬라이드: 최대 10개(5열×2행) per page
 ══════════════════════════════════ */
 function buildSlides(people) {
   const slides = [];
-  const PAGE = 12;
+  const PAGE = 10; // 최대 5열 × 2행
 
   // ── 교역자 ──
   const clergy = [...people.filter(p => p.category.includes('교역자') || p.category.includes('부장단'))]
@@ -579,18 +547,19 @@ function buildSlides(people) {
       return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
     });
   if (clergy.length) {
-    slides.push({ label: '교역자 · 부장단', color: '#e07a5f', members: clergy, gridClass: '' });
+    for (let i = 0; i < clergy.length; i += PAGE)
+      slides.push({ label: '교역자 · 부장단', color: '#e07a5f', members: clergy.slice(i, i + PAGE) });
   }
 
   // ── 스탭 ──
   const staffGroups = [
-    { label: '스탭 · 예배 & 찬양',      color: '#9b72cf', page: 10, gridClass: '',
+    { label: '스탭 · 예배 & 찬양',     color: '#9b72cf',
       match: p => p.part.includes('찬양') || p.part.includes('예배') },
-    { label: '스탭 · 미디어 & 디자인',  color: '#4db6d0', page: PAGE, gridClass: '',
+    { label: '스탭 · 미디어 & 디자인', color: '#4db6d0',
       match: p => p.part.includes('미디어') || p.part.includes('디자인') || p.part.includes('기획') || p.part.includes('행정') },
-    { label: '스탭 · 바나바팀',         color: '#6bb38e', page: PAGE, gridClass: 'barnabas', fixedCols: 2,
+    { label: '스탭 · 바나바팀',        color: '#6bb38e',
       match: p => p.part.includes('바나바') || p.part === '스탭' },
-    { label: '스탭',                    color: '#7b8ec8', page: PAGE, gridClass: '', match: () => true },
+    { label: '스탭',                   color: '#7b8ec8', match: () => true },
   ];
   const staffAll = people.filter(p => p.category === '스탭');
   const staffAssigned = new Set();
@@ -598,9 +567,8 @@ function buildSlides(people) {
     const members = staffAll.filter(p => !staffAssigned.has(p._idx) && sg.match(p));
     if (!members.length) continue;
     members.forEach(p => staffAssigned.add(p._idx));
-    for (let i = 0; i < members.length; i += sg.page) {
-      slides.push({ label: sg.label, color: sg.color, members: members.slice(i, i + sg.page), gridClass: sg.gridClass });
-    }
+    for (let i = 0; i < members.length; i += PAGE)
+      slides.push({ label: sg.label, color: sg.color, members: members.slice(i, i + PAGE) });
   }
 
   // ── 1부 교사 ──
@@ -610,9 +578,8 @@ function buildSlides(people) {
   for (const grade of ['1', '2', '3', 'etc']) {
     const members = t1.filter(p => detectGrade(p) === grade);
     if (!members.length) continue;
-    for (let i = 0; i < members.length; i += PAGE) {
-      slides.push({ label: t1_labels[grade], color: t1_colors[grade], members: members.slice(i, i + PAGE), gridClass: '' });
-    }
+    for (let i = 0; i < members.length; i += PAGE)
+      slides.push({ label: t1_labels[grade], color: t1_colors[grade], members: members.slice(i, i + PAGE) });
   }
 
   // ── 2부 교사 ──
@@ -622,17 +589,81 @@ function buildSlides(people) {
   for (const grade of ['1', '2', '3', 'etc']) {
     const members = t2.filter(p => detectGrade(p) === grade);
     if (!members.length) continue;
-    for (let i = 0; i < members.length; i += PAGE) {
-      slides.push({ label: t2_labels[grade], color: t2_colors[grade], members: members.slice(i, i + PAGE), gridClass: '' });
-    }
+    for (let i = 0; i < members.length; i += PAGE)
+      slides.push({ label: t2_labels[grade], color: t2_colors[grade], members: members.slice(i, i + PAGE) });
   }
 
   return slides;
 }
 
 /* ══════════════════════════════════
-   사진 Fallback
+   카드 너비 계산 (일반 슬라이드용)
+   - 최대 5열, 최대 2행
+   - 6명이면 4+2 배치 (cols=4)
+   - stage 실제 크기 기준
 ══════════════════════════════════ */
+function calcNormalCardW(n) {
+  const stage  = document.getElementById('stage');
+  const rect   = stage.getBoundingClientRect();
+  const GAP    = 16;
+  const BODY_H = 80;  // card-body 실측 (name+part+kw+padding)
+  const HDR_H  = 62;  // group-header + margin
+  const PAD    = 24;
+  const availW = rect.width  - 80;  // 좌우 padding 40px씩
+  const availH = rect.height - HDR_H - PAD;
+
+  // 열 수 결정: 6명→4, 그 외 min(n, 5)
+  const cols = n === 6 ? 4 : Math.min(n, 5);
+  const rows  = Math.ceil(n / cols);
+
+  // 가로 기준 최대 너비
+  const wByW = Math.floor((availW - GAP * (cols - 1)) / cols);
+  // 세로 기준 최대 너비 (카드 높이 = 사진(정사각) + body)
+  const maxCardH = Math.floor((availH - GAP * (rows - 1)) / rows);
+  const wByH = maxCardH - BODY_H;
+
+  // 가로를 꽉 채우되, 세로가 넘치면 세로 기준으로 축소
+  return Math.max(Math.min(wByW, wByH), 80);
+}
+
+/* ══════════════════════════════════
+   일반 슬라이드 렌더링
+══════════════════════════════════ */
+function renderSlides(slideData) {
+  const stage = document.getElementById('stage');
+  stage.innerHTML = '';
+
+  slideData.forEach((sd, slideIdx) => {
+    const n     = sd.members.length;
+    const cardW = calcNormalCardW(n);
+    // 6명이면 4열 기준 max-width, 아니면 min(n,5)열
+    const cols  = n === 6 ? 4 : Math.min(n, 5);
+    const GAP   = 16;
+
+    const slide = document.createElement('div');
+    slide.className = 'slide' + (slideIdx === 0 ? ' active' : '');
+
+    const hdr = document.createElement('div');
+    hdr.className = 'group-header';
+    hdr.innerHTML = `
+      <div class="group-dot" style="background:${sd.color}"></div>
+      <div class="group-title">${sd.label}</div>
+    `;
+    slide.appendChild(hdr);
+
+    const grid = document.createElement('div');
+    grid.className = 'card-grid';
+    // 열 수 기준으로 max-width 지정 → 가운데 정렬 유지
+    grid.style.maxWidth = (cols * cardW + (cols - 1) * GAP) + 'px';
+
+    sd.members.forEach(person => {
+      grid.appendChild(makeCard(person, sd.color, cardW, 'normal'));
+    });
+
+    slide.appendChild(grid);
+    stage.appendChild(slide);
+  });
+}
 function handleImgError(img, name, idx) {
   const exts = ['jpg', 'JPG', 'png', 'PNG', 'jpeg', 'JPEG'];
   if (idx < exts.length) {
@@ -697,8 +728,10 @@ function renderSlides(slideData) {
   stage.innerHTML = '';
 
   slideData.forEach((sd, slideIdx) => {
-    // 이 슬라이드에 최적화된 카드 너비 계산
-    const cardW = calcCardW(sd.members.length, sd.fixedCols);
+    const n     = sd.members.length;
+    const cardW = calcNormalCardW(n);
+    const cols  = n === 6 ? 4 : Math.min(n, 5);
+    const GAP   = 16;
 
     const slide = document.createElement('div');
     slide.className = 'slide' + (slideIdx === 0 ? ' active' : '');
@@ -712,7 +745,8 @@ function renderSlides(slideData) {
     slide.appendChild(hdr);
 
     const grid = document.createElement('div');
-    grid.className = 'card-grid' + (sd.gridClass ? ' ' + sd.gridClass : '');
+    grid.className = 'card-grid';
+    grid.style.maxWidth = (cols * cardW + (cols - 1) * GAP) + 'px';
 
     sd.members.forEach(person => {
       grid.appendChild(makeCard(person, sd.color, cardW, 'normal'));
@@ -877,11 +911,15 @@ function nav(delta) {
   });
 
   const slideData = buildSlides(unique);
-  renderSlides(slideData);
-  renderCollabSlides(unique);
+  // DOM이 완전히 렌더된 뒤 stage 실제 크기로 계산
+  requestAnimationFrame(() => {
+    renderSlides(slideData);
+    renderCollabSlides(unique);
 
-  const sl = allSlides();
-  document.getElementById('slide-info').textContent = `1 / ${sl.length}`;
+    const sl = allSlides();
+    document.getElementById('slide-info').textContent = `1 / ${sl.length}`;
+    pause();
+  });
 
   document.getElementById('btn-play').addEventListener('click', () => isPlaying ? pause() : play());
   document.getElementById('btn-prev').addEventListener('click', () => nav(-1));
@@ -901,8 +939,6 @@ function nav(delta) {
     const dx = e.changedTouches[0].clientX - touchStartX;
     if (Math.abs(dx) > 50) { dx < 0 ? nav(1) : nav(-1); }
   });
-
-  pause();
 })();
 </script>
 </body>
