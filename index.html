@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Woori High :: 2026 High & Hug</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700;900&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f5f0e8;
+    --dark: #1a1a2e;
+    --bar-h: 52px;
+    --prog-h: 4px;
+    /* 가용 세로: 1080 - 52(bar) - 4(progress) = 1024px */
+    --stage-h: calc(100vh - var(--bar-h) - var(--prog-h));
+    /* 슬라이드 내부 패딩 top/bottom = 16px / 8px, group-header = 56px */
+    --inner-h: calc(var(--stage-h) - 24px - 56px);
+    /* card-body 고정 높이: padding 22px + name 26px + part 18px + kw 30px + gap 14px = 약 110px */
+    --body-h: 108px;
+    /* card-w: photo는 정사각, card-h = photo + body-h */
+    /* 2행 기준(최악): photo = (inner-h - gap 16px) / 2 - body-h */
+    /* inner-h ≈ 944px → photo = (944-16)/2 - 108 = 464-108 = 356px */
+    --card-w: 210px;
+    --card-gap: 16px;
+    --c0: #e07a5f;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;        /* ← 전체 스크롤 차단 */
+  }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--dark);
+    color: #fff;
+  }
+
+  /* ── 상단 컨트롤 바 ── */
+  #top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--bar-h);
+    background: rgba(26,26,46,0.92);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 100;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .logo {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 16px;
+    letter-spacing: 0.3px;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .logo .sep { color: rgba(255,255,255,0.3); margin: 0 5px; }
+  .logo .hi  { color: #e07a5f; }
+  #slide-info {
+    font-size: 12px;
+    color: rgba(255,255,255,0.38);
+    letter-spacing: 0.3px;
+  }
+  .controls { display: flex; gap: 10px; align-items: center; }
+  .controls button {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.18);
+    color: #fff;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: background 0.2s;
+  }
+  .controls button:hover { background: rgba(255,255,255,0.22); }
+  .controls button.active { background: #e07a5f; border-color: #e07a5f; }
+
+  /* ── 배경 타이포 ── */
+  #bg-title {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 28vw;
+    line-height: 0.85;
+    color: rgba(255,255,255,0.025);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 0;
+    user-select: none;
+    text-align: center;
+  }
+
+  /* ── 슬라이드 영역 ── */
+  #stage {
+    position: fixed;
+    top: var(--bar-h);
+    left: 0; right: 0;
+    height: var(--stage-h);
+    overflow: hidden;         /* ← 스테이지도 스크롤 차단 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+
+  /* ── 슬라이드 ── */
+  .slide {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;             /* ← stage 높이에 맞춤 */
+    padding: 16px 40px 8px;
+    animation: fadeIn 0.55s ease;
+    overflow: hidden;         /* ← 슬라이드 내부도 차단 */
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── 그룹 헤더 ── */
+  .group-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    width: 100%;
+    max-width: 1820px;
+    flex-shrink: 0;           /* ← 헤더 높이 고정 */
+  }
+  .group-dot {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .group-title {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 1.5px;
+    opacity: 0.75;
+  }
+
+  /* ── 카드 그리드 ── */
+  .card-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--card-gap);
+    justify-content: center;
+    align-items: flex-start;
+    align-content: center;
+    /* 남은 높이를 card-grid가 채움 */
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    max-width: 1860px;
+    overflow: hidden;
+  }
+  .card-grid.barnabas {
+    max-width: calc(4 * var(--card-w) + 3 * var(--card-gap));
+  }
+
+  /* ── 퍼소나 카드 ── */
+  .card {
+    width: var(--card-w);
+    flex-shrink: 0;
+    background: var(--cream);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 6px 22px rgba(0,0,0,0.38);
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 36px rgba(0,0,0,0.52);
+  }
+
+  /* 1:1 사진 — card-w × card-w */
+  .card-photo {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+    background: #ccc;
+    image-orientation: from-image;
+  }
+
+  /* 카드 하단 */
+  .card-body {
+    padding: 10px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 4px;
+    background: var(--cream);
+    border-top: 3px solid var(--accent, #e07a5f);
+    flex-shrink: 0;
+  }
+
+  .card-name {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 20px;
+    color: #1a1a2e;
+    line-height: 1.15;
+    word-break: keep-all;
+  }
+
+  .card-part {
+    font-size: 12px;
+    color: rgba(26,26,46,0.42);
+    line-height: 1.3;
+    word-break: keep-all;
+  }
+
+  .card-keyword {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--accent, #e07a5f);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: 0.1px;
+    margin-top: 3px;
+  }
+
+  /* ── 콜라보 슬라이드 ── */
+  .slide.collab {
+    justify-content: center;
+    padding: 10px 20px 8px;
+  }
+  .slide.collab .group-header { margin-bottom: 8px; }
+  .slide.collab .group-title { font-size: 18px; }
+  .slide.collab .group-dot { width: 9px; height: 9px; }
+  .collab-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    align-items: flex-start;
+    align-content: center;
+    width: 100%;
+    max-width: 1880px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .card-sm {
+    flex-shrink: 0;
+    background: var(--cream);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.32);
+    transition: transform 0.2s ease;
+  }
+  .card-sm:hover { transform: translateY(-2px); }
+  .card-sm .card-photo {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+    background: #ccc;
+    image-orientation: from-image;
+  }
+  .card-sm .card-body {
+    padding: 5px 5px 7px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 2px;
+    background: var(--cream);
+    border-top: 2px solid var(--accent, #e07a5f);
+    flex-shrink: 0;
+  }
+  .card-sm .card-name {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: 12px;
+    color: #1a1a2e;
+    line-height: 1.1;
+    word-break: keep-all;
+  }
+  .card-sm .card-part {
+    font-size: 9px;
+    color: rgba(26,26,46,0.42);
+    line-height: 1.2;
+    word-break: keep-all;
+  }
+  .card-sm .card-keyword {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 20px;
+    font-size: 8px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--accent, #e07a5f);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 1px;
+  }
+
+  /* ── 프로그레스 바 ── */
+  #progress-wrap {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: var(--prog-h);
+    background: rgba(255,255,255,0.08);
+    z-index: 100;
+  }
+  #progress-bar {
+    height: 100%;
+    background: #e07a5f;
+    width: 0%;
+    transition: width linear;
+  }
+
+  /* ── 모바일 반응형 ── */
+  @media (max-width: 768px) {
+    :root {
+      --card-w: calc((100vw - 48px) / 2);
+      --card-gap: 10px;
+      --bar-h: 44px;
+    }
+    .logo { font-size: 12px; }
+    .logo .sep { margin: 0 3px; }
+    #slide-info { font-size: 11px; }
+    .controls { gap: 6px; }
+    .controls button { padding: 4px 10px; font-size: 11px; }
+    #btn-fs { display: none; }
+    .slide { padding: 10px 12px 6px; }
+    .group-header { margin-bottom: 10px; gap: 8px; }
+    .group-title { font-size: 13px; letter-spacing: 0.5px; }
+    .group-dot { width: 8px; height: 8px; }
+    .card { border-radius: 8px; }
+    .card-body { padding: 6px 6px 8px; gap: 3px; }
+    .card-name { font-size: 13px; }
+    .card-part { font-size: 9px; }
+    .card-keyword { font-size: 9px; padding: 2px 8px; margin-top: 1px; }
+    .slide.collab { padding: 6px 8px 4px; }
+    .collab-grid { gap: 5px; }
+    .slide.collab .group-title { font-size: 12px; }
+    #bg-title { font-size: 50vw; }
+  }
+
+  @media (max-width: 480px) {
+    :root {
+      --card-w: calc((100vw - 36px) / 2);
+      --card-gap: 8px;
+    }
+    .logo { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg-title">HIGH<br>&amp; HUG</div>
+
+<div id="top-bar">
+  <div class="logo">Woori High <span class="sep">::</span> <span class="hi">2026 High &amp; Hug</span></div>
+  <div id="slide-info">— / —</div>
+  <div class="controls">
+    <button id="btn-prev">◀</button>
+    <button id="btn-play" class="active">⏸</button>
+    <button id="btn-next">▶</button>
+    <button id="btn-fs">⛶</button>
+  </div>
+</div>
+
+<div id="stage"></div>
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+
+<script>
+/* ══════════════════════════════════
+   DATA
+══════════════════════════════════ */
+const RAW_LINES = [
+  // ── 교역자 / 부장단 ──
+  '박규현,교역자 / 부장단,1부 부장,고등부의 무게감,Staff_박규현',
+  '임희선,교역자 / 부장단,2부 부장,고등부의나무,Staff_임희선',
+  '하윤호,교역자 / 부장단,전도사,고등부의 웃음부자,하윤호',
+  '양현서,교역자 / 부장단,교역자,고등부의 중간계투,양현서',
+  // ── 스탭 ──
+  '온유한,스탭,스탭:찬양팀,중고신입,Staff_온유한',
+  '정연우,스탭,스탭: 바나바팀,고등부의 영원한 막내,Staff_정연우',
+  '김현민,스탭,스탭: 미디어팀,진짜 현민,Staff_김현민',
+  '김기윤,스탭,찬양팀,고등부의 얼굴,Staff_김기윤',
+  '허준혁,스탭,찬양팀,조용한 사람,Staff_허준혁',
+  '박혜원,스탭,스탭: 예배팀,고등부의 05대장,Staff_박혜원',
+  '김혜린,스탭,미디어팀,고등부의 모르겠어요,Staff_김혜린',
+  '이채희,스탭,찬양팀,고등부의 국밥,Staff_이채희',
+  '나선유,스탭,미디어팀,고등부의 시선,Staff_나선유',
+  '김우진,스탭,미디어팀,잘모르겠습니다,Staff_김우진',
+  '한상원,스탭,예배팀,고등부 애교남,Staff_한상원',
+  '최지인,스탭,스탭: 기획디자인팀,고등부의 디자이너~^^,Staff_최지인',
+  '황지현,스탭,찬양팀,고등부 스탭 막내,Staff_황지현',
+  '김지호,스탭,예배팀,고등부 여수룬,Staff_김지호',
+  '박세원,스탭,예배팀,.,Staff_박세원',
+  '주예원,스탭,바나바팀,고등부의 도비,Staff_주예원',
+  '장현민,스탭,예배팀,고등부의 열정맨,Staff_장현민',
+  '이주하,스탭,바나바팀,고등부의 김영환,Staff_이주하',
+  '이선주,스탭,스탭,바나바사랑해,Staff_이선주',
+  '박준규,스탭,찬양팀,고등부의 divo,Staff_박준규',
+  '도윤성,스탭,스탭: 미디어팀,다가오는 6월의 국군장병,Staff_도윤성',
+  '황현민,스탭,찬양팀,고등부의 외치는 소리 (고외소),Staff_황현민',
+  '최성우,스탭,행정 기획디자인팀,고등부의 공대생 패트,Staff_최성우',
+  '박성준,스탭,바나바팀,고등부의 예스맨,Staff_박성준',
+  '최지성,스탭,예배팀,피곤해몬스터,Staff_최지성',
+  '김기영,스탭,기획디자인팀,크리에이트영,Staff_김기영',
+  '김승혁,스탭,바나바팀,비타민!,Staff_김승혁',
+  '이수아,스탭,미디어팀,뚜뚜,Staff_이수아',
+  '이지윤,스탭,스탭: 찬양팀,이지~,Staff_이지윤',
+  '이소정,스탭,찬양팀,고등부의 이루마,Staff_이소정',
+  // ── 1부 교사 ──
+  '이은경,1부 교사,회계,화이팅!!!,1_지원_이은경',
+  '김수현,1부 교사,1부 행정,고등부의 살림꾼,1_지원_김수현',
+  '김태훈,1부 교사,1-1반,고인물입니다,1_1_김태훈',
+  '임미영,1부 교사,1-2반,고등부의 잔소리쟁이,1_1_임미영',
+  '정찬우,1부 교사,1-3반,고등부의 4얼간이 중 1명,1_1_정찬우',
+  '최선화,1부 교사,1-4반,새내기,1_1_최선화',
+  '김영진,1부 교사,1-5반,막내 교사,1_1_김영진',
+  '손미은,1부 교사,1-6반,고등부의 그림자,1_1_손미은',
+  '이창운,1부 교사,1-7반,배우고 있는 선생님,1_1_이창운',
+  '우남원,1부 교사,1-8반,매초선생님,1_1_우남원',
+  '윤요셉,1부 교사,1-9반,1부의 막내 양육교사,1_1_윤요셉',
+  '최준성,1부 교사,2-1반,,1_2_최준성',
+  '장희은,1부 교사,2-2반,,1_2_장희은',
+  '윤영주,1부 교사,2-3반,고등부의 아빠,1_2_윤영주',
+  '조혜린,1부 교사,2-4반,고등부의 교사,1_2_조혜린',
+  '원성진,1부 교사,2-5반,고등부신입,1_2_원성진',
+  '조은교,1부 교사,2-6반,,1_2_조은교',
+  '박제현,1부 교사,2-7반,고등부의 숨은손,1_2_박제현',
+  '조한혁,1부 교사,3-1반,숨은고수,1_3_조한혁',
+  '정혜진,1부 교사,3-2반,마그네슘,1_3_정혜진',
+  '차승준,1부 교사,3-3반,고등부 고인물,1_3_차승준',
+  '임혜인,1부 교사,3-4반,.,1_3_임혜인',
+  '유승철B,1부 교사,3-5반,삭개오,1_3_유승철B',
+  '홍성희,1부 교사,3-6반,고등부의 사오정,1_3_홍성희',
+  '곽현택,1부 교사,3-7반,고등부의??,1_3_곽현택',
+  '강유성,1부 교사,3-9반,.,1_3_강유성',
+  '양용철,1부 교사,3-11반,3학년 11반의 나침반,1_3_양용철',
+  '조명희,1부 교사,지원,,1_지원_조명희',
+  '백이현,1부 교사,지원,,1_지원_백이현',
+  '최태윤,1부 교사,지원,고등부의 골칫거리ㅠ,1_지원_최태윤',
+  // ── 2부 교사 ──
+  '김성훈,2부 교사,2부 행정,,2_지원_김성훈',
+  '이은총,2부 교사,1-1반,고등부 인싸이고 싶은 아싸,2_1_이은총',
+  '김혜림,2부 교사,1-6반,고등부의 그림자.,2_1_김혜림',
+  '이성원,2부 교사,1-3반,고등부의 문지기,2_1_이성원',
+  '유상아,2부 교사,1-4반,고등부의 인스타,2_1_유상아',
+  '정성철,2부 교사,1-5반,고등부의 활력소,2_1_정성철',
+  '이미진,2부 교사,1-2반,^^,2_1_이미진',
+  '박종국,2부 교사,1-7반,오직 예수,2_1_박종국',
+  '김지연,2부 교사,1-8반,생각보다 열심히 하는 사람,2_1_김지연',
+  '김의현,2부 교사,1-9반,고등부 교사 막내,2_1_김의현',
+  '박정호,2부 교사,2-1반,몸에 좋은 약은 입에 쓰다,2_2_박정호',
+  '전은숙,2부 교사,2-2반,고등부의 텐걸,2_2_전은숙',
+  '정성인,2부 교사,2-3반,미참석,2_2_정성인',
+  '김효정,2부 교사,2-4반,뭘까요?^^;;;,2_2_김효정',
+  '조형준,2부 교사,2-5반,,2_2_조형준',
+  '정희경,2부 교사,2-6반,고등부의 느좋쌤,2_2_정희경',
+  '김현기,2부 교사,2-7반,고등부의 거인,2_2_김현기',
+  '정민혜,2부 교사,2-8반,,2_2_정민혜',
+  '조여준,2부 교사,2-9반,도저히뭐라고써야할지모르겠음,2_2_조여준',
+  '이준호,2부 교사,3-1반,파수꾼,2_3_이준호',
+  '원옥인,2부 교사,3-2반,고등부의 곁,2_3_원옥인',
+  '이명준,2부 교사,3-3반,고등부 파수꾼,2_3_이명준',
+  '김세원,2부 교사,3-4반,고등부의 공기,2_3_김세원',
+  '이우연,2부 교사,3-5반,초보교사,2_3_이우연',
+  '김영아,2부 교사,3-6반,함께하지못해 아쉽고 죄송합니다.,2_3_김영아',
+  '김영두,2부 교사,3-7반,부르심의 순종 타문화권 선교,2_3_김영두',
+  '하정호,2부 교사,지원,,2_지원_하정호',
+  '김중민,2부 교사,지원,고등부의 #T,2_지원_김중민',
+];
+
+/* ══════════════════════════════════
+   CSV 파서
+══════════════════════════════════ */
+function parseLine(line) {
+  const cols = [];
+  let cur = '', inQ = false;
+  for (const c of line.trim()) {
+    if (c === '"') { inQ = !inQ; continue; }
+    if (c === ',' && !inQ) { cols.push(cur.trim()); cur = ''; continue; }
+    cur += c;
+  }
+  cols.push(cur.trim());
+  return { name: cols[0]||'', category: cols[1]||'', part: cols[2]||'', keyword: cols[3]||'', photos: cols[4]||'' };
+}
+
+const CLERGY_ORDER = ['양현서', '하윤호', '박규현', '임희선'];
+
+function detectGrade(p) {
+  if (/^1_1_/.test(p.photos) || /^2_1_/.test(p.photos)) return '1';
+  if (/^1_2_/.test(p.photos) || /^2_2_/.test(p.photos)) return '2';
+  if (/^1_3_/.test(p.photos) || /^2_3_/.test(p.photos)) return '3';
+  if (p.part.includes('1학년') || /\b1-\d/.test(p.part)) return '1';
+  if (p.part.includes('2학년') || /\b2-\d/.test(p.part)) return '2';
+  if (p.part.includes('3학년') || /\b3학년/.test(p.part)) return '3';
+  return 'etc';
+}
+
+/* ══════════════════════════════════
+   카드 너비 동적 계산
+   슬라이드당 최대 인원 수를 받아서
+   1920×1080 기준으로 넘치지 않는
+   최적 card-w를 계산
+══════════════════════════════════ */
+function calcCardW(memberCount, fixedCols) {
+  const BAR_H   = 52;
+  const PROG_H  = 4;
+  const PAD_TB  = 24;   // slide padding top+bottom
+  const HDR_H   = 48;   // group-header + margin
+  const BODY_H  = 96;   // card-body 고정 높이 (압축 버전)
+  const GAP     = 16;
+
+  const stageH  = window.innerHeight - BAR_H - PROG_H;
+  const gridH   = stageH - PAD_TB - HDR_H;
+  const stageW  = window.innerWidth - 80; // padding 40*2
+
+  // 열 수가 고정되어 있으면 그 열 수 기준으로 너비 계산
+  if (fixedCols) {
+    return Math.min(Math.floor((stageW - GAP * (fixedCols - 1)) / fixedCols), 300);
+  }
+
+  // 최적 열 수 탐색
+  let bestW = 80;
+  for (let cols = 1; cols <= memberCount; cols++) {
+    const rows  = Math.ceil(memberCount / cols);
+    const cardW = Math.floor((stageW - GAP * (cols - 1)) / cols);
+    const cardH = cardW + BODY_H; // photo = cardW (1:1)
+    const totalH = rows * cardH + GAP * (rows - 1);
+    if (totalH <= gridH && cardW > bestW) bestW = cardW;
+  }
+  return Math.min(bestW, 300); // 최대 300px 캡
+}
+
+/* ══════════════════════════════════
+   슬라이드 목록 생성
+══════════════════════════════════ */
+function buildSlides(people) {
+  const slides = [];
+  const PAGE = 12;
+
+  // ── 교역자 ──
+  const clergy = [...people.filter(p => p.category.includes('교역자') || p.category.includes('부장단'))]
+    .sort((a, b) => {
+      const ia = CLERGY_ORDER.indexOf(a.name), ib = CLERGY_ORDER.indexOf(b.name);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
+  if (clergy.length) {
+    slides.push({ label: '교역자 · 부장단', color: '#e07a5f', members: clergy, gridClass: '' });
+  }
+
+  // ── 스탭 ──
+  const staffGroups = [
+    { label: '스탭 · 예배 & 찬양',      color: '#9b72cf', page: 10, gridClass: '',
+      match: p => p.part.includes('찬양') || p.part.includes('예배') },
+    { label: '스탭 · 미디어 & 디자인',  color: '#4db6d0', page: PAGE, gridClass: '',
+      match: p => p.part.includes('미디어') || p.part.includes('디자인') || p.part.includes('기획') || p.part.includes('행정') },
+    { label: '스탭 · 바나바팀',         color: '#6bb38e', page: PAGE, gridClass: 'barnabas', fixedCols: 2,
+      match: p => p.part.includes('바나바') || p.part === '스탭' },
+    { label: '스탭',                    color: '#7b8ec8', page: PAGE, gridClass: '', match: () => true },
+  ];
+  const staffAll = people.filter(p => p.category === '스탭');
+  const staffAssigned = new Set();
+  for (const sg of staffGroups) {
+    const members = staffAll.filter(p => !staffAssigned.has(p._idx) && sg.match(p));
+    if (!members.length) continue;
+    members.forEach(p => staffAssigned.add(p._idx));
+    for (let i = 0; i < members.length; i += sg.page) {
+      slides.push({ label: sg.label, color: sg.color, members: members.slice(i, i + sg.page), gridClass: sg.gridClass });
+    }
+  }
+
+  // ── 1부 교사 ──
+  const t1 = people.filter(p => p.category === '1부 교사');
+  const t1_colors = { '1': '#81b29a', '2': '#5d9e7a', '3': '#3a7d55', 'etc': '#2a5e3f' };
+  const t1_labels = { '1': '1부 교사 · 1학년', '2': '1부 교사 · 2학년', '3': '1부 교사 · 3학년', 'etc': '1부 교사 · 지원' };
+  for (const grade of ['1', '2', '3', 'etc']) {
+    const members = t1.filter(p => detectGrade(p) === grade);
+    if (!members.length) continue;
+    for (let i = 0; i < members.length; i += PAGE) {
+      slides.push({ label: t1_labels[grade], color: t1_colors[grade], members: members.slice(i, i + PAGE), gridClass: '' });
+    }
+  }
+
+  // ── 2부 교사 ──
+  const t2 = people.filter(p => p.category === '2부 교사');
+  const t2_colors = { '1': '#f2cc8f', '2': '#e8a84a', '3': '#d4862a', 'etc': '#b86e1a' };
+  const t2_labels = { '1': '2부 교사 · 1학년', '2': '2부 교사 · 2학년', '3': '2부 교사 · 3학년', 'etc': '2부 교사 · 지원' };
+  for (const grade of ['1', '2', '3', 'etc']) {
+    const members = t2.filter(p => detectGrade(p) === grade);
+    if (!members.length) continue;
+    for (let i = 0; i < members.length; i += PAGE) {
+      slides.push({ label: t2_labels[grade], color: t2_colors[grade], members: members.slice(i, i + PAGE), gridClass: '' });
+    }
+  }
+
+  return slides;
+}
+
+/* ══════════════════════════════════
+   사진 Fallback
+══════════════════════════════════ */
+function handleImgError(img, name, idx) {
+  const exts = ['jpg', 'JPG', 'png', 'PNG', 'jpeg', 'JPEG'];
+  if (idx < exts.length) {
+    img.src = `photos/${name}.${exts[idx]}`;
+    img.onerror = () => handleImgError(img, name, idx + 1);
+  } else {
+    img.src = 'photos/default.jpg';
+    img.onerror = null;
+  }
+}
+
+/* ══════════════════════════════════
+   카드 생성 (공용)
+══════════════════════════════════ */
+function makeCard(person, color, cardW, size) {
+  const card = document.createElement('div');
+  card.className = size === 'sm' ? 'card-sm' : 'card';
+  card.style.setProperty('--accent', color);
+  if (cardW) card.style.width = cardW + 'px';
+
+  const img = document.createElement('img');
+  img.className = 'card-photo';
+  img.alt = person.name;
+  img.src = `photos/${person.photos}.jpg`;
+  img.onerror = () => handleImgError(img, person.photos, 0);
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'card-name';
+  nameEl.textContent = person.name;
+  body.appendChild(nameEl);
+
+  if (size !== 'sm') {
+    const partText = (person.part && person.part !== '*') ? person.part : '';
+    if (partText) {
+      const partEl = document.createElement('div');
+      partEl.className = 'card-part';
+      partEl.textContent = partText;
+      body.appendChild(partEl);
+    }
+    const kw = (person.keyword && person.keyword !== '.' && person.keyword !== '*') ? person.keyword : '';
+    if (kw) {
+      const kwEl = document.createElement('div');
+      kwEl.className = 'card-keyword';
+      kwEl.textContent = kw;
+      body.appendChild(kwEl);
+    }
+  }
+
+  card.appendChild(img);
+  card.appendChild(body);
+  return card;
+}
+
+/* ══════════════════════════════════
+   일반 슬라이드 렌더링
+══════════════════════════════════ */
+function renderSlides(slideData) {
+  const stage = document.getElementById('stage');
+  stage.innerHTML = '';
+
+  slideData.forEach((sd, slideIdx) => {
+    // 이 슬라이드에 최적화된 카드 너비 계산
+    const cardW = calcCardW(sd.members.length, sd.fixedCols);
+
+    const slide = document.createElement('div');
+    slide.className = 'slide' + (slideIdx === 0 ? ' active' : '');
+
+    const hdr = document.createElement('div');
+    hdr.className = 'group-header';
+    hdr.innerHTML = `
+      <div class="group-dot" style="background:${sd.color}"></div>
+      <div class="group-title">${sd.label}</div>
+    `;
+    slide.appendChild(hdr);
+
+    const grid = document.createElement('div');
+    grid.className = 'card-grid' + (sd.gridClass ? ' ' + sd.gridClass : '');
+
+    sd.members.forEach(person => {
+      grid.appendChild(makeCard(person, sd.color, cardW, 'normal'));
+    });
+
+    slide.appendChild(grid);
+    stage.appendChild(slide);
+  });
+}
+
+/* ══════════════════════════════════
+   콜라보 슬라이드
+══════════════════════════════════ */
+const COLLAB_DEFS = [
+  { label: '1부 교사', color: '#4a9e78', filter: p => p.category === '1부 교사' },
+  { label: '2부 교사', color: '#d4862a', filter: p => p.category === '2부 교사' },
+  { label: '스탭',     color: '#7b72cf', filter: p => p.category === '스탭' },
+];
+
+function makeCollabSlide(members, label, color, nameOnly) {
+  const n = members.length;
+  const GAP = 6;
+  const BAR_H  = 52;
+  const PROG_H = 4;
+  const HDR_H  = 44;
+  const PAD_TB = 18;
+  const BODY_H_SM   = nameOnly ? 26 : 52;
+  const AVAIL_W = window.innerWidth  - 40;
+  const AVAIL_H = window.innerHeight - BAR_H - PROG_H - PAD_TB - HDR_H;
+
+  let bestW = 40;
+  for (let cols = 1; cols <= n; cols++) {
+    const rows  = Math.ceil(n / cols);
+    const w     = Math.floor((AVAIL_W - GAP * (cols - 1)) / cols);
+    const totalH = rows * (w + BODY_H_SM) + GAP * (rows - 1);
+    if (totalH <= AVAIL_H && w > bestW) bestW = w;
+  }
+  const cardW = Math.min(bestW, nameOnly ? 90 : 150);
+
+  const slide = document.createElement('div');
+  slide.className = 'slide collab';
+
+  const hdr = document.createElement('div');
+  hdr.className = 'group-header';
+  hdr.innerHTML = `
+    <div class="group-dot" style="background:${color};width:9px;height:9px;border-radius:50%;flex-shrink:0;"></div>
+    <div class="group-title" style="font-size:17px;opacity:0.75;">${label}</div>
+  `;
+  slide.appendChild(hdr);
+
+  const grid = document.createElement('div');
+  grid.className = 'collab-grid';
+  grid.style.gap = GAP + 'px';
+
+  const catColor = {
+    '교역자 / 부장단': '#e07a5f',
+    '스탭': '#9b72cf',
+    '1부 교사': '#4a9e78',
+    '2부 교사': '#d4862a',
+  };
+
+  members.forEach(person => {
+    const accent = nameOnly ? (catColor[person.category] || '#aaa') : color;
+    const card = makeCard(person, accent, cardW, 'sm');
+
+    if (nameOnly) {
+      const body = card.querySelector('.card-body');
+      const name = body.querySelector('.card-name');
+      body.innerHTML = '';
+      body.style.padding = '3px 3px 5px';
+      name.style.fontSize = Math.max(8, Math.min(12, cardW * 0.13)) + 'px';
+      body.appendChild(name);
+    }
+
+    grid.appendChild(card);
+  });
+
+  slide.appendChild(grid);
+  return slide;
+}
+
+function renderCollabSlides(people) {
+  const stage = document.getElementById('stage');
+
+  COLLAB_DEFS.forEach(cd => {
+    const members = people.filter(cd.filter);
+    if (!members.length) return;
+    stage.appendChild(makeCollabSlide(members, cd.label, cd.color, false));
+  });
+
+  const ORDER = ['교역자 / 부장단', '스탭', '1부 교사', '2부 교사'];
+  const allSorted = [...people].sort((a, b) => {
+    const ia = ORDER.indexOf(a.category), ib = ORDER.indexOf(b.category);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  stage.appendChild(makeCollabSlide(allSorted, 'High &amp; Hug 2026 — 전체', '#e07a5f', true));
+}
+
+/* ══════════════════════════════════
+   컨트롤러
+══════════════════════════════════ */
+let current = 0, timer = null, isPlaying = true;
+const INTERVAL = 8500;
+
+const allSlides = () => document.querySelectorAll('.slide');
+
+function goTo(idx) {
+  const sl = allSlides();
+  sl[current]?.classList.remove('active');
+  current = ((idx % sl.length) + sl.length) % sl.length;
+  sl[current]?.classList.add('active');
+  document.getElementById('slide-info').textContent = `${current + 1} / ${sl.length}`;
+  resetProgress();
+}
+
+function resetProgress() {
+  const bar = document.getElementById('progress-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    bar.style.transition = `width ${INTERVAL}ms linear`;
+    bar.style.width = isPlaying ? '100%' : '0%';
+  }));
+}
+
+function play() {
+  isPlaying = true;
+  document.getElementById('btn-play').textContent = '⏸';
+  document.getElementById('btn-play').classList.add('active');
+  resetProgress();
+  timer = setInterval(() => goTo(current + 1), INTERVAL);
+}
+
+function pause() {
+  isPlaying = false;
+  document.getElementById('btn-play').textContent = '▶';
+  document.getElementById('btn-play').classList.remove('active');
+  clearInterval(timer);
+  const bar = document.getElementById('progress-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '0%';
+}
+
+function nav(delta) {
+  clearInterval(timer);
+  goTo(current + delta);
+  if (isPlaying) timer = setInterval(() => goTo(current + 1), INTERVAL);
+}
+
+/* ══════════════════════════════════
+   INIT
+══════════════════════════════════ */
+(function init() {
+  const people = RAW_LINES.map((l, i) => ({ ...parseLine(l), _idx: i }));
+
+  const seen = new Set();
+  const unique = people.filter(p => {
+    const k = p.name + '|' + p.photos;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
+  const slideData = buildSlides(unique);
+  renderSlides(slideData);
+  renderCollabSlides(unique);
+
+  const sl = allSlides();
+  document.getElementById('slide-info').textContent = `1 / ${sl.length}`;
+
+  document.getElementById('btn-play').addEventListener('click', () => isPlaying ? pause() : play());
+  document.getElementById('btn-prev').addEventListener('click', () => nav(-1));
+  document.getElementById('btn-next').addEventListener('click', () => nav(1));
+  document.getElementById('btn-fs').addEventListener('click', () => {
+    document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft')  nav(-1);
+    if (e.key === 'ArrowRight') nav(1);
+    if (e.key === ' ') { e.preventDefault(); isPlaying ? pause() : play(); }
+  });
+
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) { dx < 0 ? nav(1) : nav(-1); }
+  });
+
+  pause();
+})();
+</script>
+</body>
+</html>
